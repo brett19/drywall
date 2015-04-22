@@ -3,14 +3,14 @@
 //dependencies
 var config = require('./config'),
     express = require('express'),
+    couchbase = require('couchbase'),
+    ottoman = require('ottoman'),
     cookieParser = require('cookie-parser'),
     bodyParser = require('body-parser'),
     session = require('express-session'),
-    mongoStore = require('connect-mongo')(session),
     http = require('http'),
     path = require('path'),
     passport = require('passport'),
-    mongoose = require('mongoose'),
     helmet = require('helmet'),
     csrf = require('csurf');
 
@@ -23,15 +23,15 @@ app.config = config;
 //setup the web server
 app.server = http.createServer(app);
 
-//setup mongoose
-app.db = mongoose.createConnection(config.mongodb.uri);
-app.db.on('error', console.error.bind(console, 'mongoose connection error: '));
-app.db.once('open', function () {
-  //and... we have a data store
-});
+//setup ottoman
+var cbcluster = new couchbase.Cluster(config.couchbase.uri);
+var cbbucket = cbcluster.openBucket(config.couchbase.bucket);
+cbbucket.on('error', console.error.bind(console, 'couchbase connection error: '));
+ottoman.bucket = cbbucket;
+app.db = ottoman;
 
 //config data models
-require('./models')(app, mongoose);
+require('./models')(app, ottoman);
 
 //settings
 app.disable('x-powered-by');
@@ -50,8 +50,7 @@ app.use(cookieParser(config.cryptoKey));
 app.use(session({
   resave: true,
   saveUninitialized: true,
-  secret: config.cryptoKey,
-  store: new mongoStore({ url: config.mongodb.uri })
+  secret: config.cryptoKey
 }));
 app.use(passport.initialize());
 app.use(passport.session());

@@ -46,12 +46,12 @@ exports.signup = function(req, res){
   });
 
   workflow.on('duplicateUsernameCheck', function() {
-    req.app.db.models.User.findOne({ username: req.body.username }, function(err, user) {
+    req.app.db.models.User.findByUsername(req.body.username, function(err, users) {
       if (err) {
         return workflow.emit('exception', err);
       }
 
-      if (user) {
+      if (users.length > 0) {
         workflow.outcome.errfor.username = 'username already taken';
         return workflow.emit('response');
       }
@@ -61,12 +61,12 @@ exports.signup = function(req, res){
   });
 
   workflow.on('duplicateEmailCheck', function() {
-    req.app.db.models.User.findOne({ email: req.body.email.toLowerCase() }, function(err, user) {
+    req.app.db.models.User.findByEmail(req.body.email.toLowerCase(), function(err, users) {
       if (err) {
         return workflow.emit('exception', err);
       }
 
-      if (user) {
+      if (users.length > 0) {
         workflow.outcome.errfor.email = 'email already registered';
         return workflow.emit('response');
       }
@@ -105,9 +105,11 @@ exports.signup = function(req, res){
   workflow.on('createAccount', function() {
     var fieldsToSet = {
       isVerified: req.app.config.requireAccountVerification ? 'no' : 'yes',
-      'name.full': workflow.user.username,
+      name: {
+        full: workflow.user.username
+      },
       user: {
-        id: workflow.user._id,
+        id: workflow.user,
         name: workflow.user.username
       },
       search: [
@@ -121,7 +123,7 @@ exports.signup = function(req, res){
       }
 
       //update user with account
-      workflow.user.roles.account = account._id;
+      workflow.user.roles.account = account;
       workflow.user.save(function(err, user) {
         if (err) {
           return workflow.emit('exception', err);

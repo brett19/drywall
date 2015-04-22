@@ -40,21 +40,30 @@ exports.send = function(req, res, next){
   });
 
   workflow.on('patchUser', function(token, hash) {
-    var conditions = { email: req.body.email.toLowerCase() };
-    var fieldsToSet = {
-      resetPasswordToken: hash,
-      resetPasswordExpires: Date.now() + 10000000
-    };
-    req.app.db.models.User.findOneAndUpdate(conditions, fieldsToSet, function(err, user) {
+    req.app.db.models.User.findByEmail(req.body.email.toLowerCase(), function(err, users) {
       if (err) {
         return workflow.emit('exception', err);
+      }
+
+      var user = null;
+      if (users.length > 0) {
+        user = users[0];
       }
 
       if (!user) {
         return workflow.emit('response');
       }
 
-      workflow.emit('sendEmail', token, user);
+      user.resetPasswordToken = hash;
+      user.resetPasswordExpires = new Date(Date.now()+10000000);
+
+      user.save(function(err) {
+        if (err) {
+          return workflow.emit('exception', err);
+        }
+
+        workflow.emit('sendEmail', token, user);
+      });
     });
   });
 

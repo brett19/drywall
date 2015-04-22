@@ -46,24 +46,22 @@ exports.login = function(req, res){
 
   workflow.on('abuseFilter', function() {
     var getIpCount = function(done) {
-      var conditions = { ip: req.ip };
-      req.app.db.models.LoginAttempt.count(conditions, function(err, count) {
+      req.app.db.models.LoginAttempt.findByIp(req.ip, function(err, attempts) {
         if (err) {
           return done(err);
         }
 
-        done(null, count);
+        done(null, attempts.length);
       });
     };
 
     var getIpUserCount = function(done) {
-      var conditions = { ip: req.ip, user: req.body.username };
-      req.app.db.models.LoginAttempt.count(conditions, function(err, count) {
+      req.app.db.models.LoginAttempt.findByIpAndUser(req.ip, req.body.username, function(err, attempts) {
         if (err) {
           return done(err);
         }
 
-        done(null, count);
+        done(null, attempts.length);
       });
     };
 

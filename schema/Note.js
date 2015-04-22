@@ -1,13 +1,12 @@
 'use strict';
 
-exports = module.exports = function(app, mongoose) {
-  var noteSchema = new mongoose.Schema({
-    data: { type: String, default: '' },
+exports = module.exports = function(app, ottoman) {
+  ottoman.model('Note', {
+    data: { type: 'string', default: '' },
     userCreated: {
-      id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      name: { type: String, default: '' },
-      time: { type: Date, default: Date.now }
+      id: { ref:'User' },
+      name: { type: 'string', default: '' },
+      time: { type: 'Date', default: Date.now }
     }
   });
-  app.db.model('Note', noteSchema);
 };

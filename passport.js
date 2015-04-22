@@ -10,20 +10,23 @@ exports = module.exports = function(app, passport) {
 
   passport.use(new LocalStrategy(
     function(username, password, done) {
-      var conditions = { isActive: 'yes' };
+      var searchFn = null;
       if (username.indexOf('@') === -1) {
-        conditions.username = username;
+        searchFn = app.db.models.User.findByUsername.bind(
+            app.db.models.User, username);
       }
       else {
-        conditions.email = username.toLowerCase();
+        searchFn = app.db.models.User.findByEmail.bind(
+            app.db.models.User, username.toLowerCase());
       }
 
-      app.db.models.User.findOne(conditions, function(err, user) {
-        if (err) {
-          return done(err);
+      searchFn(function(err, users) {
+        var user = null;
+        if (users && users.length > 0) {
+          user = users[0];
         }
 
-        if (!user) {
+        if (!user || user.isActive !== 'yes') {
           return done(null, false, { message: 'Unknown user' });
         }
 
@@ -119,19 +122,30 @@ exports = module.exports = function(app, passport) {
   }
 
   passport.serializeUser(function(user, done) {
-    done(null, user._id);
+    console.log('serializeUser', user, user._id);
+    done(null, user.id());
   });
 
   passport.deserializeUser(function(id, done) {
-    app.db.models.User.findOne({ _id: id }).populate('roles.admin').populate('roles.account').exec(function(err, user) {
-      if (user && user.roles && user.roles.admin) {
-        user.roles.admin.populate("groups", function(err, admin) {
+    console.log('getById', id);
+    app.db.models.User.getById(id, function(err, user) {
+      console.log(err, user);
+      if (err) {
+        done(err, null);
+        return;
+      }
+
+      user.load('roles.account', 'roles.admin', function(err) {
+        console.log('LoadX', err, user);
+
+        if (user && user.roles && user.roles.admin) {
+          // TODO: LOAD GROUPS!
           done(err, user);
-        });
-      }
-      else {
-        done(err, user);
-      }
+        } else {
+          done(err, user);
+        }
+      });
+
     });
   });
 };

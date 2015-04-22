@@ -7,7 +7,7 @@ exports.init = function(req, res, next){
 
   collections.forEach(function(el, i, arr) {
     queries.push(function(done) {
-      req.app.db.models[el].count({}, function(err, count) {
+      req.app.db.models[el].count(function(err, count) {
         if (err) {
           return done(err, null);
         }

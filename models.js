@@ -1,16 +1,18 @@
 'use strict';
 
-exports = module.exports = function(app, mongoose) {
+exports = module.exports = function(app, ottoman) {
   //embeddable docs first
-  require('./schema/Note')(app, mongoose);
-  require('./schema/Status')(app, mongoose);
-  require('./schema/StatusLog')(app, mongoose);
-  require('./schema/Category')(app, mongoose);
+  require('./schema/Note')(app, ottoman);
+  require('./schema/Status')(app, ottoman);
+  require('./schema/StatusLog')(app, ottoman);
+  require('./schema/Category')(app, ottoman);
 
   //then regular docs
-  require('./schema/User')(app, mongoose);
-  require('./schema/Admin')(app, mongoose);
-  require('./schema/AdminGroup')(app, mongoose);
-  require('./schema/Account')(app, mongoose);
-  require('./schema/LoginAttempt')(app, mongoose);
+  require('./schema/User')(app, ottoman);
+  require('./schema/Admin')(app, ottoman);
+  require('./schema/AdminGroup')(app, ottoman);
+  require('./schema/Account')(app, ottoman);
+  require('./schema/LoginAttempt')(app, ottoman);
+
+  ottoman.ensureIndices(function() {});
 };

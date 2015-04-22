@@ -16,6 +16,14 @@ exports.find = function(req, res, next){
     filters.name = new RegExp('^.*?'+ req.query.name +'.*$', 'i');
   }
 
+  console.log({
+    filters: filters,
+    keys: 'pivot name',
+    limit: req.query.limit,
+    page: req.query.page,
+    sort: req.query.sort
+  });
+
   req.app.db.models.Status.pagedFind({
     filters: filters,
     keys: 'pivot name',

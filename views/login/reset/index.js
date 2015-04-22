@@ -33,13 +33,18 @@ exports.set = function(req, res){
   });
 
   workflow.on('findUser', function() {
-    var conditions = {
-      email: req.params.email,
-      resetPasswordExpires: { $gt: Date.now() }
-    };
-    req.app.db.models.User.findOne(conditions, function(err, user) {
+    req.app.db.models.User.findByEmail(req.params.email, function(err, users) {
       if (err) {
         return workflow.emit('exception', err);
+      }
+
+      var user = null;
+      if (users.length > 0) {
+        user = users[0];
+      }
+
+      if (user.resetPasswordExpires <= new Date()) {
+        user = null;
       }
 
       if (!user) {
@@ -68,8 +73,9 @@ exports.set = function(req, res){
         return workflow.emit('exception', err);
       }
 
-      var fieldsToSet = { password: hash, resetPasswordToken: '' };
-      req.app.db.models.User.findByIdAndUpdate(user._id, fieldsToSet, function(err, user) {
+      user.password = hash;
+      user.resetPasswordToken = '';
+      user.save(function(err) {
         if (err) {
           return workflow.emit('exception', err);
         }

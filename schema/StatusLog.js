@@ -1,14 +1,13 @@
 'use strict';
 
-exports = module.exports = function(app, mongoose) {
-  var statusLogSchema = new mongoose.Schema({
-    id: { type: String, ref: 'Status' },
-    name: { type: String, default: '' },
+exports = module.exports = function(app, ottoman) {
+  ottoman.model('StatusLog', {
+    sid: { ref: 'Status' },
+    name: { type: 'string', default: '' },
     userCreated: {
-      id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      name: { type: String, default: '' },
-      time: { type: Date, default: Date.now }
+      id: { ref: 'User' },
+      name: { type: 'string', default: '' },
+      time: { type: 'Date', default: Date.now }
     }
   });
-  app.db.model('StatusLog', statusLogSchema);
 };

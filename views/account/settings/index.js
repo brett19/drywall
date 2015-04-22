@@ -4,7 +4,7 @@ var renderSettings = function(req, res, next, oauthMessage) {
   var outcome = {};
 
   var getAccountData = function(callback) {
-    req.app.db.models.Account.findById(req.user.roles.account.id, 'name company phone zip').exec(function(err, account) {
+    req.app.db.models.Account.getById(req.user.roles.account.id(), function(err, account) {
       if (err) {
         return callback(err, null);
       }
@@ -15,7 +15,7 @@ var renderSettings = function(req, res, next, oauthMessage) {
   };
 
   var getUserData = function(callback) {
-    req.app.db.models.User.findById(req.user.id, 'username email twitter.id github.id facebook.id google.id tumblr.id').exec(function(err, user) {
+    req.app.db.models.User.getById(req.user.id(), function(err, user) {
       if (err) {
         callback(err, null);
       }
@@ -265,34 +265,35 @@ exports.update = function(req, res, next){
   });
 
   workflow.on('patchAccount', function() {
-    var fieldsToSet = {
-      name: {
-        first: req.body.first,
-        middle: req.body.middle,
-        last: req.body.last,
-        full: req.body.first +' '+ req.body.last
-      },
-      company: req.body.company,
-      phone: req.body.phone,
-      zip: req.body.zip,
-      search: [
+    req.app.db.models.Account.getById(req.user.roles.account.id(), function(err, account) {
+      if (err) {
+        return workflow.emit('exception', err);
+      }
+
+      account.name.first = req.body.first;
+      account.name.middle = req.body.middle;
+      account.name.last = req.body.last;
+      account.name.full = req.body.first + ' ' + req.body.last;
+      account.company = req.body.company;
+      account.phone = req.body.phone;
+      account.zip = req.body.zip;
+      account.search = [
         req.body.first,
         req.body.middle,
         req.body.last,
         req.body.company,
         req.body.phone,
         req.body.zip
-      ]
-    };
-    var options = { select: 'name company phone zip' };
+      ];
 
-    req.app.db.models.Account.findByIdAndUpdate(req.user.roles.account.id, fieldsToSet, options, function(err, account) {
-      if (err) {
-        return workflow.emit('exception', err);
-      }
+      account.save(function(err) {
+        if (err) {
+          return workflow.emit('exception', err);
+        }
 
-      workflow.outcome.account = account;
-      return workflow.emit('response');
+        workflow.outcome.account = account;
+        return workflow.emit('response');
+      });
     });
   });
 
@@ -459,20 +460,26 @@ exports.password = function(req, res, next){
         return workflow.emit('exception', err);
       }
 
-      var fieldsToSet = { password: hash };
-      req.app.db.models.User.findByIdAndUpdate(req.user.id, fieldsToSet, function(err, user) {
+      req.app.db.models.User.getById(req.user.id(), function(err, user) {
         if (err) {
           return workflow.emit('exception', err);
         }
 
-        user.populate('roles.admin roles.account', 'name.full', function(err, user) {
+        user.password = hash;
+        user.save(function(err) {
           if (err) {
             return workflow.emit('exception', err);
           }
 
-          workflow.outcome.newPassword = '';
-          workflow.outcome.confirm = '';
-          workflow.emit('response');
+          user.load('roles.admin', 'roles.account', function(err) {
+            if (err) {
+              return workflow.emit('exception', err);
+            }
+
+            workflow.outcome.newPassword = '';
+            workflow.outcome.confirm = '';
+            workflow.emit('response');
+          });
         });
       });
     });
