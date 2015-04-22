@@ -1,26 +1,25 @@
 'use strict';
 
-exports = module.exports = function(app, mongoose) {
-  var adminSchema = new mongoose.Schema({
+exports = module.exports = function(app, ottoman) {
+  var Admin = ottoman.model('Admin', {
     user: {
-      id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      name: { type: String, default: '' }
+      id: { ref: 'User' },
+      name: { type: 'string', default: '' }
     },
     name: {
-      full: { type: String, default: '' },
-      first: { type: String, default: '' },
-      middle: { type: String, default: '' },
-      last: { type: String, default: '' },
+      full: { type: 'string', default: '' },
+      first: { type: 'string', default: '' },
+      middle: { type: 'string', default: '' },
+      last: { type: 'string', default: '' }
     },
-    groups: [{ type: String, ref: 'AdminGroup' }],
+    groups: [{ ref: 'AdminGroup' }],
     permissions: [{
-      name: String,
-      permit: Boolean
+      name: 'string',
+      permit: 'boolean'
     }],
-    timeCreated: { type: Date, default: Date.now },
-    search: [String]
+    timeCreated: { type: 'Date', default: Date.now }
   });
-  adminSchema.methods.hasPermissionTo = function(something) {
+  Admin.prototype.hasPermissionTo = function(something) {
     //check group permissions
     var groupHasPermission = false;
     for (var i = 0 ; i < this.groups.length ; i++) {
@@ -46,7 +45,7 @@ exports = module.exports = function(app, mongoose) {
 
     return groupHasPermission;
   };
-  adminSchema.methods.isMemberOf = function(group) {
+  Admin.prototype.isMemberOf = function(group) {
     for (var i = 0 ; i < this.groups.length ; i++) {
       if (this.groups[i]._id === group) {
         return true;
@@ -55,9 +54,4 @@ exports = module.exports = function(app, mongoose) {
 
     return false;
   };
-  adminSchema.plugin(require('./plugins/pagedFind'));
-  adminSchema.index({ 'user.id': 1 });
-  adminSchema.index({ search: 1 });
-  adminSchema.set('autoIndex', (app.get('env') === 'development'));
-  app.db.model('Admin', adminSchema);
 };

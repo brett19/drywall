@@ -1,44 +1,37 @@
 'use strict';
 
-exports = module.exports = function(app, mongoose) {
-  var accountSchema = new mongoose.Schema({
+exports = module.exports = function(app, ottoman) {
+  ottoman.model('Account', {
     user: {
-      id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      name: { type: String, default: '' }
+      id: { ref: 'User' },
+      name: { type: 'string', default: '' }
     },
-    isVerified: { type: String, default: '' },
-    verificationToken: { type: String, default: '' },
+    isVerified: { type: 'string', default: '' },
+    verificationToken: { type: 'string', default: '' },
     name: {
-      first: { type: String, default: '' },
-      middle: { type: String, default: '' },
-      last: { type: String, default: '' },
-      full: { type: String, default: '' }
+      first: { type: 'string', default: '' },
+      middle: { type: 'string', default: '' },
+      last: { type: 'string', default: '' },
+      full: { type: 'string', default: '' }
     },
-    company: { type: String, default: '' },
-    phone: { type: String, default: '' },
-    zip: { type: String, default: '' },
+    company: { type: 'string', default: '' },
+    phone: { type: 'string', default: '' },
+    zip: { type: 'string', default: '' },
     status: {
-      id: { type: String, ref: 'Status' },
-      name: { type: String, default: '' },
+      id: { ref: 'Status' },
+      name: { type: 'string', default: '' },
       userCreated: {
-        id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        name: { type: String, default: '' },
-        time: { type: Date, default: Date.now }
+        id: { ref: 'User' },
+        name: { type: 'string', default: '' },
+        time: { type: 'Date', default: Date.now }
       }
     },
-    statusLog: [mongoose.modelSchemas.StatusLog],
-    notes: [mongoose.modelSchemas.Note],
+    statusLog: 'Mixed',
+    notes: 'Mixed',
     userCreated: {
-      id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      name: { type: String, default: '' },
-      time: { type: Date, default: Date.now }
-    },
-    search: [String]
+      id: { ref: 'User' },
+      name: { type: 'string', default: '' },
+      time: { type: 'Date', default: Date.now }
+    }
   });
-  accountSchema.plugin(require('./plugins/pagedFind'));
-  accountSchema.index({ user: 1 });
-  accountSchema.index({ 'status.id': 1 });
-  accountSchema.index({ search: 1 });
-  accountSchema.set('autoIndex', (app.get('env') === 'development'));
-  app.db.model('Account', accountSchema);
 };
