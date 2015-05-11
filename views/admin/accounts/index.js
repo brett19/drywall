@@ -4,7 +4,7 @@ exports.find = function(req, res, next){
   var outcome = {};
 
   var getStatusOptions = function(callback) {
-    req.app.db.models.Status.find({ pivot: 'Account' }, 'name').sort('name').exec(function(err, statuses) {
+    req.app.db.models.Status.find({ pivot: 'Account' }, {sort: 'name'}, function(err, statuses) {
       if (err) {
         return callback(err, null);
       }

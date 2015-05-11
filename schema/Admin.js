@@ -54,4 +54,6 @@ exports = module.exports = function(app, ottoman) {
 
     return false;
   };
+
+  require('./plugins/pagedFind')(Admin);
 };

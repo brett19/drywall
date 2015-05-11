@@ -38,7 +38,7 @@ exports.read = function(req, res, next){
   var outcome = {};
 
   var getAdminGroups = function(callback) {
-    req.app.db.models.AdminGroup.find({}, 'name').sort('name').exec(function(err, adminGroups) {
+    req.app.db.models.AdminGroup.find({}, {sort:'name'}, function(err, adminGroups) {
       if (err) {
         return callback(err, null);
       }
@@ -49,7 +49,7 @@ exports.read = function(req, res, next){
   };
 
   var getRecord = function(callback) {
-    req.app.db.models.Admin.findById(req.params.id).populate('groups', 'name').exec(function(err, record) {
+    req.app.db.models.Admin.getById(req.params.id, function(err, record) {
       if (err) {
         return callback(err, null);
       }

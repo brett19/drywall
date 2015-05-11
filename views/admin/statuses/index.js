@@ -85,7 +85,7 @@ exports.create = function(req, res, next){
   });
 
   workflow.on('duplicateStatusCheck', function() {
-    req.app.db.models.Status.findById(req.app.utility.slugify(req.body.pivot +' '+ req.body.name)).exec(function(err, status) {
+    req.app.db.models.Status.getById(req.app.utility.slugify(req.body.pivot +' '+ req.body.name), function(err, status) {
       if (err) {
         return workflow.emit('exception', err);
       }

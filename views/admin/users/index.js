@@ -47,7 +47,7 @@ exports.find = function(req, res, next){
 };
 
 exports.read = function(req, res, next){
-  req.app.db.models.User.findById(req.params.id).populate('roles.admin', 'name.full').populate('roles.account', 'name.full').exec(function(err, user) {
+  req.app.db.models.User.getById(req.params.id, function(err, user) {
     if (err) {
       return next(err);
     }
@@ -79,9 +79,14 @@ exports.create = function(req, res, next){
   });
 
   workflow.on('duplicateUsernameCheck', function() {
-    req.app.db.models.User.findOne({ username: req.body.username }, function(err, user) {
+    req.app.db.models.User.findByUsername(req.body.username, function(err, users) {
       if (err) {
         return workflow.emit('exception', err);
+      }
+
+      var user = null;
+      if (users.length > 0) {
+        user = users[0];
       }
 
       if (user) {
@@ -143,12 +148,12 @@ exports.update = function(req, res, next){
   });
 
   workflow.on('duplicateUsernameCheck', function() {
-    req.app.db.models.User.findOne({ username: req.body.username, _id: { $ne: req.params.id } }, function(err, user) {
+    req.app.db.models.User.findByUsername(req.body.username, function(err, users) {
       if (err) {
         return workflow.emit('exception', err);
       }
 
-      if (user) {
+      if (users.length > 0 && users[0]._id !== req.params.id) {
         workflow.outcome.errfor.username = 'username already taken';
         return workflow.emit('response');
       }
@@ -158,13 +163,13 @@ exports.update = function(req, res, next){
   });
 
   workflow.on('duplicateEmailCheck', function() {
-    req.app.db.models.User.findOne({ email: req.body.email.toLowerCase(), _id: { $ne: req.params.id } }, function(err, user) {
+    req.app.db.models.User.findByEmail(req.body.email.toLowerCase(), function(err, users) {
       if (err) {
         return workflow.emit('exception', err);
       }
 
-      if (user) {
-        workflow.outcome.errfor.email = 'email already taken';
+      if (users.length > 0 && users[0]._id !== req.params.id) {
+        workflow.outcome.errfor.email = 'email already registered';
         return workflow.emit('response');
       }
 
@@ -173,39 +178,46 @@ exports.update = function(req, res, next){
   });
 
   workflow.on('patchUser', function() {
-    var fieldsToSet = {
-      isActive: req.body.isActive,
-      username: req.body.username,
-      email: req.body.email.toLowerCase(),
-      search: [
-        req.body.username,
-        req.body.email
-      ]
-    };
-
-    req.app.db.models.User.findByIdAndUpdate(req.params.id, fieldsToSet, function(err, user) {
+    req.app.db.models.User.getById(req.params.id, function(err, user) {
       if (err) {
         return workflow.emit('exception', err);
       }
 
-      workflow.emit('patchAdmin', user);
+      user.isActive = req.body.isActive;
+      user.username = req.body.username;
+      user.email = req.body.email.toLowerCase();
+      user.search = [
+          req.body.username,
+          req.body.email
+      ];
+      user.save(function(err) {
+        if (err) {
+          return workflow.emit('exception', err);
+        }
+
+        workflow.emit('patchAdmin', user);
+      });
     });
   });
 
   workflow.on('patchAdmin', function(user) {
     if (user.roles.admin) {
-      var fieldsToSet = {
-        user: {
-          id: req.params.id,
-          name: user.username
-        }
-      };
-      req.app.db.models.Admin.findByIdAndUpdate(user.roles.admin, fieldsToSet, function(err, admin) {
+      var admin = user.roles.admin;
+
+      admin.load(function(err) {
         if (err) {
           return workflow.emit('exception', err);
         }
 
-        workflow.emit('patchAccount', user);
+        admin.user.name = user.username;
+
+        admin.save(function(err) {
+          if (err) {
+            return workflow.emit('exception', err);
+          }
+
+          workflow.emit('patchAccount', user);
+        });
       });
     }
     else {
@@ -215,18 +227,22 @@ exports.update = function(req, res, next){
 
   workflow.on('patchAccount', function(user) {
     if (user.roles.account) {
-      var fieldsToSet = {
-        user: {
-          id: req.params.id,
-          name: user.username
-        }
-      };
-      req.app.db.models.Account.findByIdAndUpdate(user.roles.account, fieldsToSet, function(err, account) {
+      var account = user.roles.account;
+
+      account.load(function(err) {
         if (err) {
           return workflow.emit('exception', err);
         }
 
-        workflow.emit('populateRoles', user);
+        account.user.name = user.username;
+
+        account.user.save(function(err) {
+          if (err) {
+            return workflow.emit('exception', err);
+          }
+
+          workflow.emit('populateRoles', user);
+        });
       });
     }
     else {
@@ -235,14 +251,8 @@ exports.update = function(req, res, next){
   });
 
   workflow.on('populateRoles', function(user) {
-    user.populate('roles.admin roles.account', 'name.full', function(err, populatedUser) {
-      if (err) {
-        return workflow.emit('exception', err);
-      }
-
-      workflow.outcome.user = populatedUser;
-      workflow.emit('response');
-    });
+    workflow.outcome.user = user;
+    workflow.emit('response');
   });
 
   workflow.emit('validate');
@@ -277,21 +287,28 @@ exports.password = function(req, res, next){
         return workflow.emit('exception', err);
       }
 
-      var fieldsToSet = { password: hash };
-      req.app.db.models.User.findByIdAndUpdate(req.params.id, fieldsToSet, function(err, user) {
+      req.app.db.models.User.getById(req.params.id, function(err, user) {
         if (err) {
           return workflow.emit('exception', err);
         }
 
-        user.populate('roles.admin roles.account', 'name.full', function(err, user) {
+        user.password = hash;
+
+        user.save(function(err) {
           if (err) {
             return workflow.emit('exception', err);
           }
 
-          workflow.outcome.user = user;
-          workflow.outcome.newPassword = '';
-          workflow.outcome.confirm = '';
-          workflow.emit('response');
+          user.load('roles.admin', 'roles.account', function(err) {
+            if (err) {
+              return workflow.emit('exception', err);
+            }
+
+            workflow.outcome.user = user;
+            workflow.outcome.newPassword = '';
+            workflow.outcome.confirm = '';
+            workflow.emit('response');
+          })
         });
       });
     });
@@ -318,7 +335,7 @@ exports.linkAdmin = function(req, res, next){
   });
 
   workflow.on('verifyAdmin', function(callback) {
-    req.app.db.models.Admin.findById(req.body.newAdminId).exec(function(err, admin) {
+    req.app.db.models.Admin.getById(req.body.newAdminId, function(err, admin) {
       if (err) {
         return workflow.emit('exception', err);
       }
@@ -328,7 +345,7 @@ exports.linkAdmin = function(req, res, next){
         return workflow.emit('response');
       }
 
-      if (admin.user.id && admin.user.id !== req.params.id) {
+      if (admin.user.id.id() !== req.params.id) {
         workflow.outcome.errors.push('Admin is already linked to a different user.');
         return workflow.emit('response');
       }

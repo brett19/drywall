@@ -72,4 +72,6 @@ exports = module.exports = function(app, ottoman) {
       done(err, res);
     });
   };
+
+  require('./plugins/pagedFind')(User);
 };

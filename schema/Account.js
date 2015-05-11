@@ -1,7 +1,7 @@
 'use strict';
 
 exports = module.exports = function(app, ottoman) {
-  ottoman.model('Account', {
+  var Account = ottoman.model('Account', {
     user: {
       id: { ref: 'User' },
       name: { type: 'string', default: '' }
@@ -35,4 +35,6 @@ exports = module.exports = function(app, ottoman) {
     },
     search: 'Mixed'
   });
+
+  require('./plugins/pagedFind')(Account);
 };

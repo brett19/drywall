@@ -35,7 +35,7 @@ exports.find = function(req, res, next){
 };
 
 exports.read = function(req, res, next){
-  req.app.db.models.AdminGroup.findById(req.params.id).exec(function(err, adminGroup) {
+  req.app.db.models.AdminGroup.getById(req.params.id, function(err, adminGroup) {
     if (err) {
       return next(err);
     }
